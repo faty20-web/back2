@@ -290,18 +290,27 @@ app.post("/login", async (req, res) => {
 app.put("/produits/:id", verifyAdmin, upload.single("image"), async (req, res) => {
   try {
     const { nom, qty, prix, categorie } = req.body;
-    const image = req.file ? req.file.filename : req.body.image; // Maintenir l'image existante si aucune nouvelle n'est fournie
+    let image = req.body.image; // par défaut, conserver l'image existante
+
+    // Si une nouvelle image est uploadée, on l'envoie à Cloudinary
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path);
+      image = result.secure_url;
+    }
 
     const updatedProduct = await Product.findByIdAndUpdate(
       req.params.id,
       { nom, qty, prix, categorie, image },
       { new: true }
     );
+
     res.json(updatedProduct);
   } catch (error) {
+    console.error("❌ Erreur Cloudinary :", error);
     res.status(500).json({ error: "Erreur lors de la mise à jour du produit" });
   }
 });
+
 
 // 🔹 Supprimer un produit
 app.delete("/produits/:id", verifyAdmin, async (req, res) => {
